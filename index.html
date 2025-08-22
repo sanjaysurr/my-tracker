@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sanjay's Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="app-header">
+            <h1>Sanjay's Tracker</h1>
+            <p>Your personal food & expense monitoring dashboard</p>
+            <div class="date-display">
+                <span id="currentDate"></span>
+            </div>
+        </header>
+
+        <div class="tab-navigation">
+            <button class="tab-btn active" data-tab="food">
+                <span class="icon">🍎</span>
+                Food Tracker
+            </button>
+            <button class="tab-btn" data-tab="expenses">
+                <span class="icon">💰</span>
+                Expense Tracker
+            </button>
+            <button class="tab-btn" data-tab="study">
+                <span class="icon">📚</span>
+                Study Tracker
+            </button>
+            <button class="tab-btn" data-tab="study">
+                <span class="icon"></span>
+                work tracker 
+            </button>
+        </div>
+
+        <!-- Food Tracker Tab -->
+        <div id="food-tab" class="tab-content active">
+            <div class="summary-card">
+                <div class="summary-item">
+                    <h3>Today's Calories</h3>
+                    <div class="calories-display">
+                        <span id="totalCalories">0</span>
+                        <small>/ 2000 kcal</small>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="caloriesProgress" class="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-section">
+                <h3>Add Food</h3>
+                <form id="foodForm" class="food-form">
+                    <div class="form-group">
+                        <label for="foodSelect">Quick Select:</label>
+                        <select id="foodSelect">
+                            <option value="">Choose a food...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="customFood">Custom Food:</label>
+                            <input type="text" id="customFood" placeholder="Enter food name">
+                        </div>
+                        <div class="form-group">
+                            <label for="calories">Calories:</label>
+                            <input type="number" id="calories" placeholder="Enter calories" min="0">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="add-btn">
+                        <span class="btn-icon">+</span>
+                        Add Food
+                    </button>
+                </form>
+            </div>
+
+            <div class="entries-section">
+                <h3>Today's Food Entries</h3>
+                <div id="foodEntries" class="entries-list"></div>
+            </div>
+        </div>
+
+        <!-- Expenses Tracker Tab -->
+        <div id="expenses-tab" class="tab-content">
+            <div class="summary-card">
+                <div class="summary-item">
+                    <h3>Today's Expenses</h3>
+                    <div class="expense-display">
+                        ₹<span id="totalExpenses">0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-section">
+                <h3>Add Expense</h3>
+                <form id="expenseForm" class="expense-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="expenseDescription">Description:</label>
+                            <input type="text" id="expenseDescription" placeholder="What did you buy?" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="expenseAmount">Amount:</label>
+                            <input type="number" id="expenseAmount" step="0.01" placeholder="₹0.00" min="0" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="expenseCategory">Category:</label>
+                        <select id="expenseCategory" required>
+                            <option value="">Select category...</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="add-btn expense-btn">
+                        <span class="btn-icon">+</span>
+                        Add Expense
+                    </button>
+                </form>
+            </div>
+
+            <div class="entries-section">
+                <h3>Today's Expenses</h3>
+                <div id="expenseEntries" class="entries-list"></div>
+            </div>
+
+            <div class="category-summary">
+                <h3>Spending by Category</h3>
+                <div id="categoryBreakdown" class="category-list"></div>
+            </div>
+        </div>
+
+        <!-- Study Tracker Tab -->
+        <div id="study-tab" class="tab-content">
+            <div class="summary-card">
+                <div class="summary-item">
+                    <h3>Today's Study Time</h3>
+                    <div class="study-display">
+                        <span id="totalStudyHours">0</span>h 
+                        <span id="totalStudyMinutes">0</span>m
+                        <small>/ 2h target</small>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="studyProgress" class="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-section">
+                <h3>Add Study Session</h3>
+                <form id="studyForm" class="study-form">
+                    <div class="form-group">
+                        <label for="studySubject">Subject:</label>
+                        <input type="text" id="studySubject" placeholder="What did you study?" required>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="studyHours">Hours:</label>
+                            <input type="number" id="studyHours" placeholder="0" min="0" max="12" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="studyMinutes">Minutes:</label>
+                            <input type="number" id="studyMinutes" placeholder="0" min="0" max="59">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="add-btn study-btn">
+                        <span class="btn-icon">+</span>
+                        Add Study Session
+                    </button>
+                </form>
+            </div>
+
+            <div class="entries-section">
+                <h3>Today's Study Sessions</h3>
+                <div id="studyEntries" class="entries-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
