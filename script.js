@@ -407,3 +407,407 @@ function loadData() {
 
 // Make deleteEntry function available globally
 window.deleteEntry = deleteEntry;
+
+class WorkTimeTracker {
+    constructor() {
+        // Work schedule configuration
+        this.schedule = {
+            workStart: '09:30',
+            workEnd: '18:30',
+            morningBreak: { start: '11:00', end: '11:15' },
+            lunchBreak: { start: '13:20', end: '14:00' },
+            afternoonBreak: { start: '16:30', end: '16:45' }
+        };
+
+        // Task tracking
+        this.tasks = JSON.parse(localStorage.getItem('dailyTasks')) || [];
+        this.currentTask = null;
+        this.taskStartTime = null;
+
+        // Initialize the app
+        this.init();
+    }
+
+    init() {
+        this.updateCurrentTime();
+        this.updateStatus();
+        this.updateTimeSummary();
+        this.updateScheduleDisplay();
+        this.setupEventListeners();
+        this.displayTaskHistory();
+
+        // Update every second
+        setInterval(() => {
+            this.updateCurrentTime();
+            this.updateStatus();
+            this.updateTimeSummary();
+            this.updateTaskTimer();
+        }, 1000);
+    }
+
+    setupEventListeners() {
+        const startTaskBtn = document.getElementById('startTaskBtn');
+        const stopTaskBtn = document.getElementById('stopTaskBtn');
+        const taskInput = document.getElementById('taskInput');
+
+        startTaskBtn.addEventListener('click', () => this.startTask());
+        stopTaskBtn.addEventListener('click', () => this.stopTask());
+        
+        taskInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.startTask();
+            }
+        });
+    }
+
+    timeToMinutes(timeStr) {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        return hours * 60 + minutes;
+    }
+
+    minutesToTime(minutes) {
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+    }
+
+    formatDuration(minutes) {
+        const hours = Math.floor(minutes / 60);
+        const mins = Math.floor(minutes % 60);
+        return `${hours}h ${mins}m`;
+    }
+
+    getCurrentTime() {
+        return new Date();
+    }
+
+    getCurrentTimeString() {
+        const now = this.getCurrentTime();
+        return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    }
+
+    updateCurrentTime() {
+        const now = this.getCurrentTime();
+        const timeStr = now.toLocaleTimeString('en-US', { 
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        const dateStr = now.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        
+        document.getElementById('currentTime').textContent = `${dateStr} - ${timeStr}`;
+    }
+
+    getCurrentStatus() {
+        const currentTime = this.getCurrentTimeString();
+        const currentMinutes = this.timeToMinutes(currentTime);
+
+        // Check if it's lunch time
+        const lunchStart = this.timeToMinutes(this.schedule.lunchBreak.start);
+        const lunchEnd = this.timeToMinutes(this.schedule.lunchBreak.end);
+        
+        if (currentMinutes >= lunchStart && currentMinutes < lunchEnd) {
+            return {
+                status: 'Lunch Break',
+                icon: '🍽️',
+                class: 'status-lunch',
+                message: 'Enjoy your lunch!'
+            };
+        }
+
+        // Check morning break
+        const morningBreakStart = this.timeToMinutes(this.schedule.morningBreak.start);
+        const morningBreakEnd = this.timeToMinutes(this.schedule.morningBreak.end);
+        
+        if (currentMinutes >= morningBreakStart && currentMinutes < morningBreakEnd) {
+            return {
+                status: 'Morning Break',
+                icon: '☕',
+                class: 'status-break',
+                message: 'Time for a quick break!'
+            };
+        }
+
+        // Check afternoon break
+        const afternoonBreakStart = this.timeToMinutes(this.schedule.afternoonBreak.start);
+        const afternoonBreakEnd = this.timeToMinutes(this.schedule.afternoonBreak.end);
+        
+        if (currentMinutes >= afternoonBreakStart && currentMinutes < afternoonBreakEnd) {
+            return {
+                status: 'Afternoon Break',
+                icon: '☕',
+                class: 'status-break',
+                message: 'Take a breather!'
+            };
+        }
+
+        // Check work hours
+        const workStart = this.timeToMinutes(this.schedule.workStart);
+        const workEnd = this.timeToMinutes(this.schedule.workEnd);
+        
+        if (currentMinutes >= workStart && currentMinutes < workEnd) {
+            return {
+                status: 'Working',
+                icon: '💼',
+                class: 'status-working',
+                message: 'Focus time!'
+            };
+        }
+
+        return {
+            status: 'Off Work',
+            icon: '🏠',
+            class: 'status-off',
+            message: 'Work day is over!'
+        };
+    }
+
+    updateStatus() {
+        const status = this.getCurrentStatus();
+        const statusIcon = document.getElementById('statusIcon');
+        const statusText = document.getElementById('statusText');
+        const statusIndicator = document.getElementById('statusIndicator');
+
+        statusIcon.textContent = status.icon;
+        statusText.textContent = status.status;
+        
+        // Remove all status classes
+        statusIndicator.className = 'status-indicator';
+        statusIndicator.classList.add(status.class);
+
+        // Update progress bar
+        this.updateWorkProgress();
+    }
+
+    updateWorkProgress() {
+        const currentMinutes = this.timeToMinutes(this.getCurrentTimeString());
+        const workStart = this.timeToMinutes(this.schedule.workStart);
+        const workEnd = this.timeToMinutes(this.schedule.workEnd);
+
+        let progress = 0;
+        let progressText = '';
+
+        if (currentMinutes < workStart) {
+            progressText = `Work starts at ${this.schedule.workStart}`;
+        } else if (currentMinutes >= workEnd) {
+            progress = 100;
+            progressText = 'Work day completed!';
+        } else {
+            const totalWorkMinutes = workEnd - workStart;
+            const workedMinutes = currentMinutes - workStart;
+            progress = (workedMinutes / totalWorkMinutes) * 100;
+            progressText = `${Math.round(progress)}% of work day completed`;
+        }
+
+        document.getElementById('workProgress').style.width = `${progress}%`;
+        document.getElementById('progressText').textContent = progressText;
+    }
+
+    calculateWorkTimes() {
+        const currentMinutes = this.timeToMinutes(this.getCurrentTimeString());
+        const workStart = this.timeToMinutes(this.schedule.workStart);
+        const workEnd = this.timeToMinutes(this.schedule.workEnd);
+
+        // Total work time (excluding breaks)
+        const totalWorkTime = (workEnd - workStart) - 70; // 70 minutes total breaks (15+40+15)
+        
+        // Calculate time worked so far (excluding breaks)
+        let timeWorkedSoFar = 0;
+        
+        if (currentMinutes > workStart) {
+            timeWorkedSoFar = Math.min(currentMinutes, workEnd) - workStart;
+            
+            // Subtract break times if they've passed
+            const morningBreakStart = this.timeToMinutes(this.schedule.morningBreak.start);
+            const morningBreakEnd = this.timeToMinutes(this.schedule.morningBreak.end);
+            const lunchStart = this.timeToMinutes(this.schedule.lunchBreak.start);
+            const lunchEnd = this.timeToMinutes(this.schedule.lunchBreak.end);
+            const afternoonBreakStart = this.timeToMinutes(this.schedule.afternoonBreak.start);
+            const afternoonBreakEnd = this.timeToMinutes(this.schedule.afternoonBreak.end);
+
+            if (currentMinutes > morningBreakEnd) {
+                timeWorkedSoFar -= (morningBreakEnd - morningBreakStart);
+            } else if (currentMinutes > morningBreakStart) {
+                timeWorkedSoFar -= (currentMinutes - morningBreakStart);
+            }
+
+            if (currentMinutes > lunchEnd) {
+                timeWorkedSoFar -= (lunchEnd - lunchStart);
+            } else if (currentMinutes > lunchStart) {
+                timeWorkedSoFar -= (currentMinutes - lunchStart);
+            }
+
+            if (currentMinutes > afternoonBreakEnd) {
+                timeWorkedSoFar -= (afternoonBreakEnd - afternoonBreakStart);
+            } else if (currentMinutes > afternoonBreakStart) {
+                timeWorkedSoFar -= (currentMinutes - afternoonBreakStart);
+            }
+        }
+
+        const remainingWorkTime = Math.max(0, totalWorkTime - timeWorkedSoFar);
+
+        return {
+            totalWorkTime: totalWorkTime,
+            timeWorkedSoFar: Math.max(0, timeWorkedSoFar),
+            remainingWorkTime: remainingWorkTime
+        };
+    }
+
+    updateTimeSummary() {
+        const workTimes = this.calculateWorkTimes();
+        
+        document.getElementById('totalWorkTime').textContent = this.formatDuration(workTimes.totalWorkTime);
+        document.getElementById('timeWorkedSoFar').textContent = this.formatDuration(workTimes.timeWorkedSoFar);
+        document.getElementById('remainingWorkTime').textContent = this.formatDuration(workTimes.remainingWorkTime);
+        
+        // Break time is fixed
+        document.getElementById('totalBreakTime').textContent = '1h 10m';
+    }
+
+    updateScheduleDisplay() {
+        const scheduleItems = document.querySelectorAll('.schedule-item');
+        const currentMinutes = this.timeToMinutes(this.getCurrentTimeString());
+
+        scheduleItems.forEach(item => {
+            const startTime = item.getAttribute('data-start');
+            const endTime = item.getAttribute('data-end');
+            
+            if (startTime && endTime) {
+                const startMinutes = this.timeToMinutes(startTime);
+                const endMinutes = this.timeToMinutes(endTime);
+                
+                // Remove current class first
+                item.classList.remove('current');
+                
+                // Add current class if within time range
+                if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
+                    item.classList.add('current');
+                }
+            }
+        });
+    }
+
+    startTask() {
+        const taskInput = document.getElementById('taskInput');
+        const taskName = taskInput.value.trim();
+        
+        if (!taskName) {
+            alert('Please enter a task name');
+            return;
+        }
+
+        // Stop current task if any
+        if (this.currentTask) {
+            this.stopTask();
+        }
+
+        // Start new task
+        this.currentTask = {
+            id: Date.now().toString(),
+            name: taskName,
+            startTime: new Date(),
+            endTime: null,
+            duration: 0
+        };
+
+        this.taskStartTime = new Date();
+
+        // Update UI
+        document.getElementById('activeTaskName').textContent = taskName;
+        document.getElementById('activeTaskContainer').style.display = 'block';
+        document.getElementById('taskInput').style.display = 'none';
+        document.getElementById('startTaskBtn').style.display = 'none';
+
+        // Clear input
+        taskInput.value = '';
+    }
+
+    stopTask() {
+        if (!this.currentTask) return;
+
+        // Calculate duration
+        const endTime = new Date();
+        const duration = Math.floor((endTime - this.taskStartTime) / 60000); // Duration in minutes
+        
+        // Complete the task
+        this.currentTask.endTime = endTime;
+        this.currentTask.duration = duration;
+
+        // Add to tasks array
+        this.tasks.push({ ...this.currentTask });
+        
+        // Save to localStorage
+        localStorage.setItem('dailyTasks', JSON.stringify(this.tasks));
+
+        // Reset current task
+        this.currentTask = null;
+        this.taskStartTime = null;
+
+        // Update UI
+        document.getElementById('activeTaskContainer').style.display = 'none';
+        document.getElementById('taskInput').style.display = 'block';
+        document.getElementById('startTaskBtn').style.display = 'block';
+
+        // Refresh task history
+        this.displayTaskHistory();
+    }
+
+    updateTaskTimer() {
+        if (!this.currentTask || !this.taskStartTime) return;
+
+        const now = new Date();
+        const elapsed = Math.floor((now - this.taskStartTime) / 1000); // Elapsed time in seconds
+        
+        const hours = Math.floor(elapsed / 3600);
+        const minutes = Math.floor((elapsed % 3600) / 60);
+        const seconds = elapsed % 60;
+        
+        const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        document.getElementById('taskTimer').textContent = timeStr;
+    }
+
+    displayTaskHistory() {
+        const historyContainer = document.getElementById('taskHistory');
+        const totalTasksElement = document.getElementById('totalTasks');
+        const totalTaskTimeElement = document.getElementById('totalTaskTime');
+
+        if (this.tasks.length === 0) {
+            historyContainer.innerHTML = '<p class="no-tasks">No tasks completed yet today.</p>';
+            totalTasksElement.textContent = '0';
+            totalTaskTimeElement.textContent = '0h 0m';
+            return;
+        }
+
+        // Calculate total time
+        const totalMinutes = this.tasks.reduce((sum, task) => sum + task.duration, 0);
+
+        // Generate task list HTML
+        const tasksHtml = this.tasks.map(task => `
+            <div class="task-item">
+                <div class="task-details">
+                    <div class="name">${task.name}</div>
+                    <div class="time-range">
+                        ${task.startTime.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })} - 
+                        ${task.endTime.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                </div>
+                <div class="task-duration">${this.formatDuration(task.duration)}</div>
+            </div>
+        `).join('');
+
+        historyContainer.innerHTML = tasksHtml;
+        totalTasksElement.textContent = this.tasks.length.toString();
+        totalTaskTimeElement.textContent = this.formatDuration(totalMinutes);
+    }
+}
+
+// Initialize the work tracker when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    new WorkTimeTracker();
+});
